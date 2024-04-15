@@ -17,6 +17,13 @@ def addCube(halfExtents, startPosition, startOrientation, color=[1, 0, 0, 1], ma
                                 baseOrientation=quaternion)
     return cube_id
 
+def createFrustumMesh():
+    pass
+
+def addFrustum(top_radius, bottom_radius, height, position, orientation, color):
+    vertices, indices = createFrustumMesh()
+    
+
 physicsClient = p.connect(p.GUI) 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
