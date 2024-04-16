@@ -21,8 +21,24 @@ def createFrustumMesh():
     pass
 
 def addFrustum(top_radius, bottom_radius, height, position, orientation, color):
-    vertices, indices = createFrustumMesh()
-    
+    vertices, indices = createFrustumMesh() #arguments probably the radii and height
+    meshScale = [1,1,1]
+    quaternion = p.getQuaternionFromEuler(orientation)
+    visual_shape_id = p.createVisualShape(shapeType=p.GEOM_MESH,
+                                          vertices=vertices.tolist(),
+                                          indices=indices.tolist(),
+                                          meshScale=meshScale,
+                                          rgbaColor=color)
+    collision_shape_id = p.createCollisionShape(shapeType=p.GEOM_MESH,
+                                                vertices=vertices.tolist(),
+                                                indices=indices.tolist(),
+                                                meshScale=meshScale)
+    frustum_id = p.createMultiBody(baseMass=1,
+                                   baseCollisionShapeIndex=collision_shape_id,
+                                   baseVisualShapeIndex=visual_shape_id,
+                                   basePosition=position,
+                                   baseOrientation=quaternion)
+    return frustum_id
 
 physicsClient = p.connect(p.GUI) 
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
