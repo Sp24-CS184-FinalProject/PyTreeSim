@@ -32,7 +32,6 @@ class Frustum:
         # Add the origin of the top and bottom circles to vertices to render the tops and bottoms 
         self.vertices.append(self.baseOrigin) # index len(vertices) - 2
         self.vertices.append(self.topOrigin)   # index len(vertices) - 1
-        
         for i in range(len(self.vertices) - 2):
             if (i % 3 == 1): # connect top circle vertices to top origin 
                 self.indices.append(i)
@@ -48,7 +47,7 @@ class Frustum:
                 else:
                     self.indices.append(i + 3)
                 self.indices.append(len(self.vertices) - 2) # index of bottom circle 
-                  
+        self.reverseWindingOrder()     
         self.generateUVCoords()
         self.generateNormals()
         self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
@@ -140,6 +139,20 @@ class Frustum:
 
         self.indices = indices[:]
 
+    # Messed up on winding order of triangles when doing generateIndices, Flip them here
+    def reverseWindingOrder(self):
+
+        i = 0
+        while i < len(self.indices):
+            indexA = self.indices[i]
+            indexB = self.indices[i+1]
+            indexC = self.indices[i+2]
+
+            self.indices[i] = indexC
+            self.indices[i+1] = indexB
+            self.indices[i+2] = indexA
+            i += 3
+
 
     # Called with buildMesh to generate the UV Texture Coords for this object
     def generateUVCoords(self):
@@ -159,9 +172,9 @@ class Frustum:
             A = self.vertices[self.indices[i]]
             B = self.vertices[self.indices[i + 1]]
             C = self.vertices[self.indices[i + 2]]
-            
 
-            n =  -1 * np.cross(B - A, C - A) # calculate normal vector of given triangle
+            
+            n = -1 * np.cross(B - A, C - A) # calculate normal vector of given triangle
             # Consequtively add that normal vector to the normals of each individual vertex
             normals[self.indices[i]] += n
             normals[self.indices[i + 1]] += n
@@ -175,6 +188,7 @@ class Frustum:
 
         
         self.normals = normals[:]
+        
         
 
 
