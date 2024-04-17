@@ -7,13 +7,16 @@ import math
 
 class Frustum:
     
-    def __init__(self, baseOrigin, baseRadius, topOrigin, topRadius, orientation):
+    def __init__(self, baseOrigin, baseRadius, topOrigin, topRadius, orientation, parent, child, index):
         self.baseOrigin = baseOrigin
         self.baseRadius = baseRadius
         self.topOrigin = topOrigin
         self.topRadius = topRadius
         self.height = np.linalg.norm(topOrigin - baseOrigin)
         self.orientation = orientation
+        self.parent = parent
+        self.child = child
+        self.index = index
         self.vertices = []
         self.uvs = []
         self.normals = []

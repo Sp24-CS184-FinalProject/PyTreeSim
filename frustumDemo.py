@@ -27,7 +27,7 @@ topOrigin = np.array([0.2, 0.2, 3.01])
 topRadius = 2.0
 
 orientation = 1.0
-frus = Frustum(baseOrigin, baseRadius, topOrigin, topRadius, orientation)
+frus = Frustum(baseOrigin, baseRadius, topOrigin, topRadius, orientation, None, None, -1)
 frus.generateMesh(20)
 frustId = frus.CollisionId
 frustVisualId = frus.VisualId
