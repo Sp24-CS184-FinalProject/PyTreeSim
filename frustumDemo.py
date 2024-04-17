@@ -13,7 +13,7 @@ p.resetSimulation()
 #p.resetDebugVisualizerCamera(5,75,-26,[0,0,1]);
 p.resetDebugVisualizerCamera(10, -346, -16, [0, 0, 0])
 
-p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
+p.configureDebugVisualizer(p.COV_ENABLE_WIREFRAME, 1)
 
 
 
@@ -21,14 +21,14 @@ p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 0)
 
 
 #convex mesh from obj
-baseOrigin = [0.2, 0.2, .01]
+baseOrigin = np.array([0.2, 0.2, .01])
 baseRadius = 3.0
-topOrigin = [0.2, 0.2, 1.01]
+topOrigin = np.array([0.2, 0.2, 3.01])
 topRadius = 2.0
-height = 3.0
+
 orientation = 1.0
-frus = Frustum(baseOrigin, baseRadius, topOrigin, topRadius, height, orientation)
-frus.generateMesh(100)
+frus = Frustum(baseOrigin, baseRadius, topOrigin, topRadius, orientation)
+frus.generateMesh(20)
 frustId = frus.CollisionId
 frustVisualId = frus.VisualId
 texUid = p.loadTexture("Pinewood_Bark_DIFF.png")

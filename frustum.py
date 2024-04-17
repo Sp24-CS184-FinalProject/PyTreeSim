@@ -7,17 +7,18 @@ import math
 
 class Frustum:
     
-    def __init__(self, baseOrigin, baseRadius, topOrigin, topRadius, height, orientation):
+    def __init__(self, baseOrigin, baseRadius, topOrigin, topRadius, orientation):
         self.baseOrigin = baseOrigin
         self.baseRadius = baseRadius
         self.topOrigin = topOrigin
         self.topRadius = topRadius
-        self.height = height 
+        self.height = np.linalg.norm(topOrigin - baseOrigin)
         self.orientation = orientation
         self.vertices = []
         self.uvs = []
         self.normals = []
         self.indices = []
+        self.triangles = [] # list of three element lists, where each element is a vertex of a triangle 
         self.CollisionId = -1
         self.VisualId = -1
 
@@ -26,18 +27,18 @@ class Frustum:
         self.generateVertices(numSides)
         self.generateIndices()
         # Add the origin of the top and bottom circles to vertices to render the tops and bottoms 
-        self.vertices.append(self.baseOrigin)
-        self.vertices.append(self.topOrigin)
+        self.vertices.append(self.baseOrigin) # index len(vertices) - 2
+        self.vertices.append(self.topOrigin)   # index len(vertices) - 1
         
         for i in range(len(self.vertices) - 2):
-            if (i % 3 == 2): # connect top circle vertices to top origin 
+            if (i % 3 == 1): # connect top circle vertices to top origin 
                 self.indices.append(i)
                 self.indices.append(len(self.vertices) - 1) # index of topOrigin
                 if (i + 3 >= len(self.vertices) - 2): # check if vertex to right exists
-                    self.indices.append(2) # first top vertex
+                    self.indices.append(1) # first top vertex
                 else:
                     self.indices.append(i + 3)
-            if (i % 3 == 0): # connect bottom circle vertices to bottom circles origin
+            elif (i % 3 == 0): # connect bottom circle vertices to bottom circles origin
                 self.indices.append(i)
                 if (i + 3 >= len(self.vertices) - 2): # check if vertex to right exists
                     self.indices.append(0) # first top vertex
@@ -54,14 +55,14 @@ class Frustum:
                                     vertices=self.vertices,
                                     indices=self.indices,
                                     uvs=self.uvs,
-                                    normals=self.normals)
+                                    )
 
     # Create a Mesh For This Frustum, return shapeID
     # numSides determines how many vertices to create ( I.e. the level num of triangles in mesh)
     def generateVertices(self, numSides):
         vertices = []
         for i in range(numSides):
-            angle = 2.0 * math.pi * i / numSides
+            angle =  i / numSides * 2.0 * math.pi 
             # add base circle vertex
             baseX = self.baseOrigin[0] + self.baseRadius * math.cos(angle)
             baseY = self.baseOrigin[1] + self.baseRadius * math.sin(angle)
@@ -74,8 +75,8 @@ class Frustum:
             vertices.append(topVert)
             # add midpoint vertex on line connecting the top and base vertices
             line = (topVert - baseVert) / np.linalg.norm(topVert - baseVert) # vector connnecting top and bottom vertices from base -> top
-            dist = self.height / 2.0 
-            midpoint = baseVert + dist * line
+            #dist = np.linalg.norm(topVert - baseVert) / 2.0
+            midpoint = baseVert + math.sqrt((self.baseRadius - self.topRadius) * (self.baseRadius - self.topRadius) + self.height * self.height ) / 2.0 * line
             vertices.append(midpoint)
         
         self.vertices = vertices
@@ -83,7 +84,7 @@ class Frustum:
     # generate the indicies of the triangles in this mesh, should be a multiple of three
     # index 0 refers to the first vertex in self.vertices, a triangle is defined by three consequtive vertices 
     # each refering to a vertex in self.vertices
-    # Vertices are added in the following order: bottom, mid, top, bottom, mid , top ...
+    # Vertices are added in the following order: bottom, top, mid, bottom , top, mid
     # where bottom is a vertex on the bottom circle, top is a vertex on the top circle, and mid is a vertex on the midpoint connecting the two
     # indices are generated in counter clock wise order
     def generateIndices(self):
@@ -92,18 +93,18 @@ class Frustum:
             if (i % 3 == 0): # we are at a bottom vertex
                 # add first triangle 
                 indices.append(i)
-                indices.append(i + 1) # mid vertex above i, guarenteed to exist
-                if (i + 4 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
-                    indices.append(1) # mid vertex of first column
+                indices.append(i + 2) # mid vertex above i, guarenteed to exist
+                if (i + 5 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
+                    indices.append(2) # mid vertex of first column
                 else: 
-                    indices.append(i + 4) # mid vertex up and to the right of i
+                    indices.append(i + 5) # mid vertex up and to the right of i
                 # add second triangle 
                 indices.append(i)
                 # Get index of vertex up and to the right
-                if (i + 4 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
-                    indices.append(1) # mid vertex of first column
+                if (i + 5 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
+                    indices.append(2) # mid vertex of first column
                 else: 
-                    indices.append(i + 4) # mid vertex up and to the right of i
+                    indices.append(i + 5) # mid vertex up and to the right of i
                 # Get index of vertex to the right else wrap around 
                 if (i + 3 >= len(self.vertices)): 
                     indices.append(0)
@@ -111,24 +112,24 @@ class Frustum:
                     indices.append(i + 3)
 
             # Repeat logic for top row of triangles with a mid vertex as the base 
-            if (i % 3 == 1): # we are at a middle vertex
+            if (i % 3 == 2): # we are at a middle vertex
                 # add first triangle 
                 indices.append(i)
-                indices.append(i + 1) # top vertex above i, guarenteed to exist
-                if (i + 4 >= len(self.vertices)): # out of bounds, wrap around to top vertex in first column.
-                    indices.append(2) # top vertex of first column
+                indices.append(i - 1) # top vertex above i, guarenteed to exist
+                if (i + 2 >= len(self.vertices)): # out of bounds, wrap around to top vertex in first column.
+                    indices.append(1) # top vertex of first column
                 else: 
-                    indices.append(i + 4) # mid vertex up and to the right of i
+                    indices.append(i + 2) # mid vertex up and to the right of i
                 # add second triangle 
                 indices.append(i)
                 # Get index of vertex up and to the right
-                if (i + 4 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
-                    indices.append(2) # mid vertex of first column
+                if (i + 2 >= len(self.vertices)): # out of bounds, wrap around to mid vertex in first column.
+                    indices.append(1) # mid vertex of first column
                 else: 
-                    indices.append(i + 4) # mid vertex up and to the right of i
+                    indices.append(i + 2) # mid vertex up and to the right of i
                 # Get index of vertex to the right else wrap around 
                 if (i + 3 >= len(self.vertices)): 
-                    indices.append(1)
+                    indices.append(2)
                 else: 
                     indices.append(i + 3)  
 
@@ -146,10 +147,10 @@ class Frustum:
     def generateNormals(self):
         normals = []
         for vertex in self.vertices: 
-            uv = self.cartToUV(vertex)
-            normX = (-1 * self.height / (self.baseRadius - self.topRadius)) * uv[0] * math.cos(uv[1]) 
-            normY = (-1 * self.height / (self.baseRadius - self.topRadius)) * uv[0] * math.sin(uv[1])
-            normZ = uv[0] * (1 - 2 * math.sin(uv[1]) * math.sin(uv[1]))
+            
+            normX =  2 * vertex[0] * (self.topRadius - self.baseRadius) / self.height
+            normY = 2 * vertex[1] * (self.topRadius - self.baseRadius) / self.height
+            normZ =  2 * vertex[2] - self.height
             normals.append([normX, normY, normZ])
 
         self.normals = normals
@@ -157,8 +158,8 @@ class Frustum:
     # Cartesian Coordinates to UV Coords (r, \theta)
     def cartToUV(self, coord):
         uv = []
-        u = math.atan2(coord[0], coord[2]) / (2 * math.pi)
-        v = coord[1] / self.height
+        u = math.sqrt( coord[0] * coord[0] + coord[1] * coord[1])
+        v = math.atan(coord[1] / coord[0])
         uv.append(u)
         uv.append(v)
         return uv
