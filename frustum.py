@@ -47,14 +47,14 @@ class Frustum:
                     
         self.generateUVCoords()
         self.generateNormals()
-        self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
-        self.VisualId = p.createVisualShape(shapeType=p.GEOM_MESH,
-                                    rgbaColor=[1, 1, 1, 1],
-                                    specularColor=[0.4, .4, 0],
-                                    vertices=self.vertices,
-                                    indices=self.indices,
-                                    uvs=self.uvs,
-                                    normals=self.normals)
+        # self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
+        # self.VisualId = p.createVisualShape(shapeType=p.GEOM_MESH,
+        #                             rgbaColor=[1, 1, 1, 1],
+        #                             specularColor=[0.4, .4, 0],
+        #                             vertices=self.vertices,
+        #                             indices=self.indices,
+        #                             uvs=self.uvs,
+        #                             normals=self.normals)
 
     # Create a Mesh For This Frustum, return shapeID
     # numSides determines how many vertices to create ( I.e. the level num of triangles in mesh)
