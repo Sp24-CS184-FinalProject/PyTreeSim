@@ -52,7 +52,7 @@ def addTriangle(side_length, thickness, position, orientation, color=[1, 0, 0, 1
     
     
 def addFrustum(top_radius, bottom_radius, height, position, orientation =[0,0,0], color = [0,1,0], num_sides = 100):
-    frustum = Frustum(baseOrigin=position,baseRadius=bottom_radius,topOrigin=[position[0],position[1],position[2]+height],topRadius=top_radius,height=height,orientation=orientation)
+    frustum = Frustum(baseOrigin=np.array(position),baseRadius=bottom_radius,topOrigin=np.array([position[0],position[1],position[2]+height]),topRadius=top_radius,orientation=orientation)
     frustum.generateMesh(num_sides)
     
     meshScale = [1,1,1]
@@ -77,8 +77,6 @@ def addFrustum(top_radius, bottom_radius, height, position, orientation =[0,0,0]
 
 
 physicsClient = p.connect(p.GUI) 
-p.configureDebugVisualizer(p.COV_ENABLE_WIREFRAME, 1)
-p.configureDebugVisualizer(p.COV_ENABLE_RENDERING, 1)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
 #initial scene stuff
@@ -89,9 +87,9 @@ startOrientation = p.getQuaternionFromEuler([0, 0, 0])
 
 #placing objects
 
-# frustumId = addFrustum(top_radius=2, bottom_radius=1.0, height=2, position=[0,0,0.1], orientation=[0, 0, 0], color=[0, 1, 0, 1])
-triangle = addTriangle(2,0.5, [0,0,0.1],[0,0,0],mass=10)
-triangle = addTriangle(2,0.5, [0,0,0.1],[0,0,0],mass=10)
+frustumId = addFrustum(top_radius=2, bottom_radius=1.0, height=2.0, position=[0,0,0.1], orientation=[0, 0, 0], color=[0, 1, 0, 1])
+# triangle = addTriangle(2,0.5, [0,0,0.1],[0,0,0],mass=10)
+# triangle = addTriangle(2,0.5, [0,0,0.1],[0,0,0],mass=10)
 
 # Simulation loop
 for i in range(10000):
