@@ -21,9 +21,9 @@ p.configureDebugVisualizer(p.COV_ENABLE_WIREFRAME, 1)
 
 
 #convex mesh from obj
-baseOrigin = np.array([0.2, 0.2, .01])
+baseOrigin = np.array([0.0, 00, .01])
 baseRadius = 3.0
-topOrigin = np.array([0.2, 0.2, 3.01])
+topOrigin = np.array([0.0, 0.0, 3.01])
 topRadius = 2.0
 
 orientation = 1.0
@@ -51,12 +51,12 @@ for i in range(1):
   
   width = 4
   for j in range(1):
-    bodyUid = p.createMultiBody(baseMass=0,
+    bodyUid = p.createMultiBody(baseMass=2,
                       baseCollisionShapeIndex=frustId,
                       baseVisualShapeIndex=frustVisualId,
-                      basePosition=[segmentStart, 0.5 * (i % 2) + j - width / 2., 0])
+                      )
   segmentStart = segmentStart - 1
-
+texUid = p.loadTexture("Pinewood_Bark_DIFF.png")
 p.changeVisualShape(bodyUid, -1, textureUniqueId=texUid)
 
 

@@ -32,7 +32,6 @@ class Frustum:
         # Add the origin of the top and bottom circles to vertices to render the tops and bottoms 
         self.vertices.append(self.baseOrigin) # index len(vertices) - 2
         self.vertices.append(self.topOrigin)   # index len(vertices) - 1
-        
         for i in range(len(self.vertices) - 2):
             if (i % 3 == 1): # connect top circle vertices to top origin 
                 self.indices.append(i)
@@ -48,17 +47,18 @@ class Frustum:
                 else:
                     self.indices.append(i + 3)
                 self.indices.append(len(self.vertices) - 2) # index of bottom circle 
-                    
+        self.reverseWindingOrder()     
         self.generateUVCoords()
         self.generateNormals()
-        # self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
-        # self.VisualId = p.createVisualShape(shapeType=p.GEOM_MESH,
-        #                             rgbaColor=[1, 1, 1, 1],
-        #                             specularColor=[0.4, .4, 0],
-        #                             vertices=self.vertices,
-        #                             indices=self.indices,
-        #                             uvs=self.uvs,
-        #                             normals=self.normals)
+        self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
+        self.VisualId = p.createVisualShape(shapeType=p.GEOM_MESH,
+                                   rgbaColor=[1, 1, 1, 1],
+                                    specularColor=[0.4, .4, 0],
+                                    vertices=self.vertices,
+                                   indices=self.indices,
+                                    uvs=self.uvs,
+                                    normals=self.normals)
+         
 
     # Create a Mesh For This Frustum, return shapeID
     # numSides determines how many vertices to create ( I.e. the level num of triangles in mesh)
@@ -82,7 +82,7 @@ class Frustum:
             midpoint = baseVert + math.sqrt((self.baseRadius - self.topRadius) * (self.baseRadius - self.topRadius) + self.height * self.height ) / 2.0 * line
             vertices.append(midpoint)
         
-        self.vertices = vertices
+        self.vertices = vertices[:]
 
     # generate the indicies of the triangles in this mesh, should be a multiple of three
     # index 0 refers to the first vertex in self.vertices, a triangle is defined by three consequtive vertices 
@@ -137,7 +137,21 @@ class Frustum:
                     indices.append(i + 3)  
 
 
-        self.indices = indices
+        self.indices = indices[:]
+
+    # Messed up on winding order of triangles when doing generateIndices, Flip them here
+    def reverseWindingOrder(self):
+
+        i = 0
+        while i < len(self.indices):
+            indexA = self.indices[i]
+            indexB = self.indices[i+1]
+            indexC = self.indices[i+2]
+
+            self.indices[i] = indexC
+            self.indices[i+1] = indexB
+            self.indices[i+2] = indexA
+            i += 3
 
 
     # Called with buildMesh to generate the UV Texture Coords for this object
@@ -145,18 +159,38 @@ class Frustum:
         uvs = []
         for vertex in self.vertices:
             uvs.append(self.cartToUV(vertex))
-        self.uvs = uvs
+        self.uvs = uvs[:]
     
     def generateNormals(self):
         normals = []
-        for vertex in self.vertices: 
-            
-            normX =  2 * vertex[0] * (self.topRadius - self.baseRadius) / self.height
-            normY = 2 * vertex[1] * (self.topRadius - self.baseRadius) / self.height
-            normZ =  2 * vertex[2] - self.height
-            normals.append([normX, normY, normZ])
+        for vertex in self.vertices:  # set each vertex normal to 0
+            normals.append(np.array([0.0, 0.0 , 0.0]))
 
-        self.normals = normals
+        i = 0
+        while (i < len(self.indices)): 
+            # Get Positions of Triangle Vertices
+            A = self.vertices[self.indices[i]]
+            B = self.vertices[self.indices[i + 1]]
+            C = self.vertices[self.indices[i + 2]]
+
+            
+            n = -1 * np.cross(B - A, C - A) # calculate normal vector of given triangle
+            # Consequtively add that normal vector to the normals of each individual vertex
+            normals[self.indices[i]] += n
+            normals[self.indices[i + 1]] += n
+            normals[self.indices[i + 2]] += n
+            i += 3
+    
+        i = 0
+        while (i < len(normals)):
+            normals[i] /= np.linalg.norm(normals[i]) # normalize vectors
+            i += 1
+
+        
+        self.normals = normals[:]
+        
+        
+
 
     # Cartesian Coordinates to UV Coords (r, \theta)
     def cartToUV(self, coord):
