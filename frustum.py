@@ -3,6 +3,12 @@ import numpy as np
 import time
 import pybullet_data
 import math
+from panda3d.core import GeomVertexFormat
+from panda3d.core import GeomVertexData
+from panda3d.core import GeomVertexWriter
+from panda3d.core import GeomTriangles
+from panda3d.core  import Geom
+from panda3d.core import GeomPrimitive
 
 
 class Frustum:
@@ -50,14 +56,37 @@ class Frustum:
         self.reverseWindingOrder()     
         self.generateUVCoords()
         self.generateNormals()
-        self.CollisionId =  p.createCollisionShape(p.GEOM_MESH, vertices=self.vertices, indices=self.indices)
-        self.VisualId = p.createVisualShape(shapeType=p.GEOM_MESH,
-                                   rgbaColor=[1, 1, 1, 1],
-                                    specularColor=[0.4, .4, 0],
-                                    vertices=self.vertices,
-                                   indices=self.indices,
-                                    uvs=self.uvs,
-                                    normals=self.normals)
+        vformat = GeomVertexFormat.getV3n3t2()
+        vdata = GeomVertexData(name='', format=vformat, usage_hint=2) # usage hint tells us the vertex data may be manipulated later
+        vdata.setNumRows(len(self.vertices))
+        vertexWriter = GeomVertexWriter(vdata, 'vertex')
+        normalWriter = GeomVertexWriter(vdata, 'normal')
+        texcoordWriter = GeomVertexWriter(vdata, 'texcoord')
+
+        for i in range(len(self.vertices)):
+            vert = self.vertices[i]
+            norm = self.normals[i]
+            uvs = self.uvs[i]
+            vertexWriter.addData3(vert[0], vert[1], vert[2])
+            normalWriter.addData3(norm[0], norm[1], norm[2])
+            texcoordWriter.addData2(uvs[0], uvs[1])
+
+        prim = GeomTriangles(Geom.UHStatic) #set indices to static 
+        i = 0
+        while i < len(self.indices):
+            if i % 3 != 0:
+                continue
+            prim.add_vertices(self.indices[i], self.indices[i+1], self.indices[i+2])
+            prim.closePrimitive()
+            i += 3
+
+
+
+        geom = Geom(vdata)
+        geom.addPrimitive(prim)
+
+        return geom
+
          
 
     # Create a Mesh For This Frustum, return shapeID
