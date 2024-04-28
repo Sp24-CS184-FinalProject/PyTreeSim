@@ -20,6 +20,7 @@ from panda3d.bullet import BulletPlaneShape
 from panda3d.bullet import BulletBoxShape
 from panda3d.bullet import BulletRigidBodyNode
 from panda3d.bullet import BulletDebugNode
+from panda3d.bullet import BulletConeTwistConstraint
 from panda3d.core import AmbientLight
 from panda3d.core import DirectionalLight
 from panda3d.core import Vec3
@@ -27,6 +28,7 @@ from panda3d.core import Vec4
 from panda3d.core import Point3
 from panda3d.core import TransformState
 from panda3d.core import BitMask32
+
 
 
 class MyApp(ShowBase):
@@ -108,6 +110,20 @@ class MyApp(ShowBase):
         self.nodePath1 = self.nodePath.attachNewNode(node1)
         self.nodePath1.setTexture(myTexture)
         self.nodePath1.reparentTo(self.frus1NP)
+
+        #Setup ConeTwistConstraint Between Two Frustums 
+        frame1 = TransformState.makeHpr(Vec3(0, 0, 0)) # Positions Are Already in place, so is orientation so we can set Haw:0, Pitch:0  Roll: 0
+        frame2 = TransformState.makeHpr(Vec3(0, 0, 0))
+        #Set Allowable Cone Twistt Angles 
+        swing1 = 60 # degrees 
+        swing2 = 36 # degrees
+        twist = 120 # degrees
+
+        # Add Constraint With Limits to Physics Engine
+        cs = BulletConeTwistConstraint(self.frusNP.node(), self.frus1NP.node(), frame1, frame2)
+        cs.setDebugDrawSize(2.0)
+        cs.setLimit(swing1, swing2, twist)
+        self.world.attachConstraint(cs)
 
         #Camera Set To Look At Node1
         self.cam.setPos(0, -60, 55)
