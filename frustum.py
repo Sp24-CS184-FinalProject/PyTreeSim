@@ -27,7 +27,6 @@ class Frustum:
         self.uvs = []
         self.normals = []
         self.indices = []
-        self.triangles = [] # list of three element lists, where each element is a vertex of a triangle 
         self.CollisionId = -1
         self.VisualId = -1
 
@@ -79,8 +78,6 @@ class Frustum:
             prim.add_vertices(self.indices[i], self.indices[i+1], self.indices[i+2])
             prim.closePrimitive()
             i += 3
-
-
 
         geom = Geom(vdata)
         geom.addPrimitive(prim)
