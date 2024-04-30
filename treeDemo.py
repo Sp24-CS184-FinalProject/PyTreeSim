@@ -32,6 +32,7 @@ class MyApp(ShowBase):
         ShowBase.__init__(self)
         self.worldNP = self.render.attachNewNode('World')
 
+
         # World
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
         self.debugNP.show()
@@ -57,24 +58,35 @@ class MyApp(ShowBase):
 
         self.world.attachRigidBody(self.groundNP.node())
 
-        # Create A Tree Trunk 
-        baseOrigin = np.array([0, 0 , 0])
-        baseRadius = 5.0
-        height = 100.0
-        slimFactor = .98
-        frustumMass = 10.0
+        # create a few trees of different types
         myTexture = loader.loadTexture("Pinewood_Bark_DIFF.png")
-        tree = Tree(baseOrigin, baseRadius, height, slimFactor, frustumMass,  myTexture, self.worldNP, self.world, self.render)
-        tree.buildTrunk(50, slimFactor, frustumMass)
+        height = 10.0
+        baseRadius = 0.5
+        
+        type = 'original'
+        baseOrigin = np.array([0, 0, 0])
+        original = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+
+        type = 'dense'
+        baseOrigin = np.array([20, 0, 0])
+        dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+
+        type = 'sparse'
+        baseOrigin = np.array([40, 0, 0])
+        sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+
+        type = None
+        baseOrigin = np.array([60, 0, 0])
+        default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         #Camera Set To Look At Node1
-        self.cam.setPos(0, -60, 55)
+        self.cam.setPos(0, -50, 0)
         
         self.world.setDebugNode(self.debugNP.node())
 
 
         
-        self.cam.setPos(0, -60, 55)
+        #self.cam.setPos(0, -100, 100)
         self.cam.lookAt(self.worldNP)
         self.world.setDebugNode(self.debugNP.node())
     
