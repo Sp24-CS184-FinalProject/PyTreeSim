@@ -89,7 +89,9 @@ class Tree:
         if parent == None:
             current = self.buildTrunk()
         else:
-            startRelative = random.uniform(0.9, 1.6)
+            #startRelative = random.uniform(0.9, 1.6)
+            parentFrustums = len(parent.frustums)
+            startRelative = (int) (random.uniform(parentFrustums / 4, parentFrustums))
             length = random.uniform(minBranchLength, maxBranchLength)
             baseRadius = random.uniform(minBranchThickness / 2, maxBranchThickness / 2)
             current = self.addBranch(parent, startRelative, length, baseRadius, 10, self.slimFactor, 1.0)
@@ -106,10 +108,17 @@ class Tree:
         return self.trunk
     
     def addBranch(self, parent, startRelative, length, baseRadius, numFrustums, slimFactor, frustumMass):
-        startPos = parent.startPos + startRelative * parent.length * parent.direction
+        #startPos = parent.startPos + startRelative * parent.length * parent.direction
+        jointFrustum = parent.frustums[startRelative]
+        startPos = jointFrustum[0].baseOrigin
         branch = Branch(False, length, startPos, baseRadius, numFrustums, slimFactor,
                         frustumMass, self.texture, self.worldNP, self.world, self.render)
         branch.build()
+        swing1 = 60 # degrees 
+        swing2 = 36 # degrees
+        twist = 120 # degrees
+        damping = .9
+        parent.addConstraint(jointFrustum[1], branch.baseFrustumNP, swing1, swing2, twist, damping)
         parent.children.append(branch)
         return branch
 
@@ -134,6 +143,7 @@ class Branch:
         self.worldNP = worldNP # Pointer to the bullet physics engine world
         self.world = world
         self.render = render # pointer to the graphics engine
+        self.frustums = []
         self.children = []
 
     def getPhysicsNodes(self):
@@ -145,6 +155,8 @@ class Branch:
         currentPos = list(self.endPos)
         frus = Frustum(self.startPos, self.baseRadius, currentPos, self.baseRadius * self.slimFactor, None, None, None, None)
         currNP, currVisualNP = self.buildFrustum(frus, frustumMass)
+        self.baseFrustumNP = currNP
+        self.frustums.append([frus, currNP])
         currRadius = self.baseRadius * self.slimFactor
         
         
@@ -162,8 +174,8 @@ class Branch:
             nextPos = currentPos + self.frusLength * self.direction
 
             nextFrus = Frustum(currentPos, currRadius, nextPos, currRadius * self.slimFactor, None, None, None, None)
-
             nextNP, nextVisualNP = self.buildFrustum(nextFrus, frustumMass * self.slimFactor)
+            self.frustums.append([nextFrus, nextNP])
 
             self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping, softness, bias, relaxation)
             currNP, currVisualNP = nextNP, nextVisualNP
