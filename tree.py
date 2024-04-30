@@ -22,6 +22,13 @@ from panda3d.core import Vec4
 from panda3d.core import Point3
 from panda3d.core import TransformState
 from panda3d.core import BitMask32
+from panda3d.core import LVector3, LMatrix4
+from panda3d.core import LVector3f, LMatrix4f
+from panda3d.core import Texture, TextureStage
+from panda3d.bullet import BulletSphereShape, BulletGenericConstraint
+
+
+
 import random
 
 
@@ -148,6 +155,11 @@ class Branch:
         self.render = render # pointer to the graphics engine
         self.frustums = []
         self.children = []
+        self.frustums = []
+        self.trunk=trunk
+
+    def getPhysicsNodes(self):
+        return self.frustumNPNodes 
 
     def getPhysicsNodes(self):
         return self.frustumNPNodes 
@@ -161,6 +173,8 @@ class Branch:
         self.baseFrustumNP = currNP
         self.frustums.append([frus, currNP])
         currRadius = self.baseRadius * self.slimFactor
+        self.frustums.append(currNP)
+        
         
         
         #Set Allowable Cone Twistt Angles 
@@ -182,11 +196,14 @@ class Branch:
 
             self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping, softness, bias, relaxation)
             currNP, currVisualNP = nextNP, nextVisualNP
+            self.frustums.append(currNP)
+
             currentPos = nextPos
             currRadius = currRadius * self.slimFactor
             frustumMass = frustumMass * self.slimFactor
             i += 1
-        
+        if not self.trunk:
+            self.placeLeavesRandomly()        
     # Creates the Physical And Graphical NodePaths For a Frustum Object and attaches them to the correct worldNodes, Two Return Values 
     def buildFrustum(self, frustum, frustumMass):
         geom = frustum.generateMesh(10)
@@ -213,6 +230,97 @@ class Branch:
 
         return frusNP, visualFrusNP
     
+    def drawLeaf(self, position, closest_frustum_node):   
+        vformat = GeomVertexFormat.getV3n3cpt2()
+        vdata = GeomVertexData('leaf', vformat, Geom.UHStatic)
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        normal = GeomVertexWriter(vdata, 'normal')
+        color = GeomVertexWriter(vdata, 'color')
+        texcoord = GeomVertexWriter(vdata, 'texcoord')
+        
+        #create mesh for leaf (maybe move this somewhere else)
+        thickness = 0.1
+        front_points = [LVector3(0, 0, 1), LVector3(-0.5, 0, 0), LVector3(0.5, 0, 0), LVector3(0, 0, 1)]
+        back_points = [p + LVector3(0, thickness, 0) for p in front_points] 
+        for p in front_points + back_points:
+            vertex.addData3f(p)
+            normal.addData3f(0, 1, 0)
+            color.addData4f(0.2, 0.8, 0.2, 1)
+            texcoord.addData2f(p.x + 0.5, p.z + 0.5)
+        
+        tris = GeomTriangles(Geom.UHStatic)
+        tris.addVertices(0, 1, 2)
+        tris.addVertices(1, 3, 2)
+        tris.addVertices(4, 5, 6)
+        tris.addVertices(5, 7, 6)
+        
+        for i in range(len(front_points)):
+            next_i = (i + 1) % len(front_points)
+            tris.addVertices(i, next_i, i + 4)
+            tris.addVertices(next_i, next_i + 4, i + 4)
+        
+        geom = Geom(vdata)
+        geom.addPrimitive(tris)
+        
+        leafNode = GeomNode('leaf')
+        leafNode.addGeom(geom)
+        
+        #add physics
+        leafBodyNode = BulletRigidBodyNode('Leaf')
+        leafBodyNode.setMass(0.05)
+        leafShape = BulletBoxShape(LVector3f(0.5, 0.1, 0.5))  # Adjust as necessary
+        leafBodyNode.addShape(leafShape)
+
+        leafNP = self.render.attachNewNode(leafBodyNode)
+        leafNP.setPos(position)
+        
+        leafNP.node().setDeactivationEnabled(False)
+        self.world.attachRigidBody(leafBodyNode)
+        leafNP.setCollideMask(BitMask32.allOn())
+        
+        #leaf size
+        leafNP.setScale(1) 
+
+        # Create visual node and attach
+        leafVisualNP = NodePath(leafNode)
+        leafVisualNP.reparentTo(leafNP)
+        texture = loader.loadTexture("leaf.jpg")
+        texture.setWrapU(Texture.WMRepeat)
+        texture.setWrapV(Texture.WMRepeat)
+        leafVisualNP.setTexture(texture, 1)
+
+        # Apply random orientation
+        random_roll = random.uniform(0, 360)
+        random_pitch = random.uniform(0, 360)
+        random_yaw = random.uniform(0, 360)
+        leafNP.setHpr(random_roll, random_pitch, random_yaw)
+
+
+        # Constraint setup
+        swing1, swing2, twist, damping = 30, 30, 0, 0.5
+        self.addLeafConstraint(leafNP, closest_frustum_node, swing1, swing2, twist, damping)
+        
+
+        
+    def placeLeavesRandomly(self, num_leaves_per_frustum=1):
+        for i in range(self.numFrustums):
+            frus_length = self.length / self.numFrustums
+            current_base = self.startPos + i * frus_length * self.direction
+            perp_vector = np.cross(self.direction, np.array([0, 0, 1]))
+            perp_vector = perp_vector / np.linalg.norm(perp_vector)
+            for j in range(num_leaves_per_frustum):
+
+                rand_pos_along_frustum = random.uniform(0, frus_length)
+                leaf_pos = current_base + rand_pos_along_frustum * self.direction
+                
+                #need to offset the leaf from the centroid of the frustum
+                perp_offset = perp_vector * random.uniform(-0.5, 0.5) * self.baseRadius
+                leaf_pos += perp_offset
+                
+                leaf_pos_panda = LVector3(leaf_pos[0], leaf_pos[1], leaf_pos[2])
+                #Todo: check how to attach to the closest frustum?
+                self.drawLeaf(leaf_pos_panda, self.frustums[i])
+    
     # Adds a conetwist constraint between two frustums, assumes each is next to one another in world space
     def addConstraint(self, frus1NP, frus2NP, swing1, swing2, twist, damping, softness , bias, relaxation):
         #Setup ConeTwistConstraint Between Two Frustums 
@@ -236,6 +344,18 @@ class Branch:
         cs.setMaxMotorImpulse(8.0)
         cs.enableMotor(True)
         self.world.attach(cs)
+        
+    def addLeafConstraint(self, leafNP, frustumNP, swing1, swing2, twist, damping):
+        posLeaf = Point3(0, 0, 0) #connect to centroid atm, maybe update this
+        posFrus = Point3(0, 0, 0)
+
+        frameLeaf = TransformState.makePosHpr(posLeaf, Vec3(0, 0, 0))
+        frameFrus = TransformState.makePosHpr(posFrus, Vec3(0, 0, 0))
+
+        constraint = BulletConeTwistConstraint(leafNP.node(), frustumNP.node(), frameLeaf, frameFrus)
+        constraint.setLimit(swing1, swing2, twist)
+        constraint.setDamping(damping)
+        self.world.attachConstraint(constraint, True)
 
         # Add Piston Constraint To Limit Weird Translation 
         #slider = BulletSliderConstraint(frus1NP.node(), frus2NP.node(), frame1, frame2, True)

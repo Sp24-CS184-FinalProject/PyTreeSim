@@ -54,11 +54,11 @@ class MyApp(ShowBase):
         # World
         self.worldNP = self.render.attachNewNode('World')
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-        self.debugNP.show()
-        self.debugNP.node().showWireframe(False)
-        self.debugNP.node().showConstraints(True)
-        self.debugNP.node().showBoundingBoxes(False)
-        self.debugNP.node().showNormals(True)
+        # self.debugNP.show()
+        # self.debugNP.node().showWireframe(False)
+        # self.debugNP.node().showConstraints(True)
+        # self.debugNP.node().showBoundingBoxes(False)
+        # self.debugNP.node().showNormals(True)
 
         #wind simulation
         self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=.5, scale=1.0)
@@ -86,17 +86,17 @@ class MyApp(ShowBase):
         baseOrigin = np.array([0, 0, 0])
         self.original = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        type = 'dense'
-        baseOrigin = np.array([20, 0, 0])
-        #dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        # type = 'dense'
+        # baseOrigin = np.array([20, 0, 0])
+        # dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        type = 'sparse'
-        baseOrigin = np.array([40, 0, 0])
-        #sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        # type = 'sparse'
+        # baseOrigin = np.array([40, 0, 0])
+        # sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        type = None
-        baseOrigin = np.array([60, 0, 0])
-        #default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        # type = None
+        # baseOrigin = np.array([60, 0, 0])
+        # default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         #Camera Set To Look At Node1
         self.cam.setPos(0, -50, 0)
