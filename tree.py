@@ -153,13 +153,9 @@ class Branch:
         self.worldNP = worldNP # Pointer to the bullet physics engine world
         self.world = world
         self.render = render # pointer to the graphics engine
-        self.frustums = []
         self.children = []
         self.frustums = []
         self.trunk=trunk
-
-    def getPhysicsNodes(self):
-        return self.frustumNPNodes 
 
     def getPhysicsNodes(self):
         return self.frustumNPNodes 
@@ -173,7 +169,6 @@ class Branch:
         self.baseFrustumNP = currNP
         self.frustums.append([frus, currNP])
         currRadius = self.baseRadius * self.slimFactor
-        self.frustums.append(currNP)
         
         
         
@@ -196,7 +191,6 @@ class Branch:
 
             self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping, softness, bias, relaxation)
             currNP, currVisualNP = nextNP, nextVisualNP
-            self.frustums.append(currNP)
 
             currentPos = nextPos
             currRadius = currRadius * self.slimFactor
@@ -319,7 +313,7 @@ class Branch:
                 
                 leaf_pos_panda = LVector3(leaf_pos[0], leaf_pos[1], leaf_pos[2])
                 #Todo: check how to attach to the closest frustum?
-                self.drawLeaf(leaf_pos_panda, self.frustums[i])
+                self.drawLeaf(leaf_pos_panda, self.frustums[i][1])
     
     # Adds a conetwist constraint between two frustums, assumes each is next to one another in world space
     def addConstraint(self, frus1NP, frus2NP, swing1, swing2, twist, damping, softness , bias, relaxation):
