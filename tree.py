@@ -17,6 +17,7 @@ from panda3d.bullet import BulletDebugNode
 from panda3d.core import AmbientLight
 from panda3d.core import DirectionalLight
 from panda3d.core import Vec3
+from panda3d.core import LQuaternionf
 from panda3d.core import Vec4
 from panda3d.core import Point3
 from panda3d.core import TransformState
@@ -40,6 +41,7 @@ class Tree:
         self.numTrunkFrustums = 50
         self.slimFactor = .98
         self.frustumMass = 10.0
+        self.frustumNPNodes = []
 
         # TODO: organize these types in a way that makes sense
         # different types have different branch patterns
@@ -76,6 +78,10 @@ class Tree:
             self.minBranchLength = 0
             self.maxBranchLength = 0
         self.build(self.levels, None, self.numChildren, self.minBranchThickness, self.maxBranchThickness, self.minBranchLength, self.maxBranchLength)
+        self.getPhysicsNodes()[0].setMass(0) # Give Frustum Attached to Ground Infinite Mass to Represent the fact it is planted 
+
+    def getPhysicsNodes(self):
+        return self.frustumNPNodes 
 
     def build(self, level, parent, numChildren, minBranchThickness, maxBranchThickness, minBranchLength, maxBranchLength):
         if level == 0:
@@ -96,6 +102,7 @@ class Tree:
         self.trunk = Branch(True, self.height, self.baseOrigin, self.baseRadius, self.numTrunkFrustums, self.slimFactor,
                         self.frustumMass, self.texture, self.worldNP, self.world, self.render)
         self.trunk.build()
+        self.frustumNPNodes.extend(self.trunk.getPhysicsNodes())
         return self.trunk
     
     def addBranch(self, parent, startRelative, length, baseRadius, numFrustums, slimFactor, frustumMass):
@@ -111,6 +118,7 @@ class Branch:
     def __init__(self, trunk, length, startPos, baseRadius, numFrustums, slimFactor, frustumMass, texture, worldNP, world, render):
         self.length = length
         self.startPos = startPos
+        self.frustumNPNodes = []
         if trunk:
             self.direction = np.array([0, 0, 1])
         else:
@@ -128,33 +136,36 @@ class Branch:
         self.render = render # pointer to the graphics engine
         self.children = []
 
+    def getPhysicsNodes(self):
+        return self.frustumNPNodes 
+
     def build(self):
-        frusLength = self.length / self.numFrustums
+        self.frusLength = self.length / self.numFrustums
         frustumMass = self.frustumMass
         currentPos = list(self.endPos)
         frus = Frustum(self.startPos, self.baseRadius, currentPos, self.baseRadius * self.slimFactor, None, None, None, None)
         currNP, currVisualNP = self.buildFrustum(frus, frustumMass)
         currRadius = self.baseRadius * self.slimFactor
         
-        # Setup Constraints for all joints
-        frame1 = TransformState.makeHpr(Vec3(0, 0, 0)) # Positions Are Already in place, so is orientation so we can set Haw:0, Pitch:0  Roll: 0
-        frame2 = TransformState.makeHpr(Vec3(0, 0, 0))
+        
         #Set Allowable Cone Twistt Angles 
-        swing1 = 60 # degrees 
-        swing2 = 36 # degrees
-        twist = 120 # degrees
-        damping = .9
+        swing1 = 10 # degrees 
+        swing2 = 10 # degrees
+        twist = 15 # degrees
+        damping = .2
+        softness = .8
+        bias = .3
+        relaxation = .3
 
         i = 1
         while i < self.numFrustums:
-            nextPos = currentPos + frusLength * self.direction
+            nextPos = currentPos + self.frusLength * self.direction
 
             nextFrus = Frustum(currentPos, currRadius, nextPos, currRadius * self.slimFactor, None, None, None, None)
 
             nextNP, nextVisualNP = self.buildFrustum(nextFrus, frustumMass * self.slimFactor)
 
-            self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping)
-
+            self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping, softness, bias, relaxation)
             currNP, currVisualNP = nextNP, nextVisualNP
             currentPos = nextPos
             currRadius = currRadius * self.slimFactor
@@ -163,7 +174,7 @@ class Branch:
         
     # Creates the Physical And Graphical NodePaths For a Frustum Object and attaches them to the correct worldNodes, Two Return Values 
     def buildFrustum(self, frustum, frustumMass):
-        geom = frustum.generateMesh(20)
+        geom = frustum.generateMesh(10)
         mesh = BulletTriangleMesh()
         mesh.addGeom(geom)
         shape = BulletTriangleMeshShape(mesh, dynamic=False)
@@ -171,6 +182,8 @@ class Branch:
         frusNP = self.worldNP.attachNewNode(BulletRigidBodyNode('Frustum'))
         frusNP.node().setMass(frustumMass)
         frusNP.node().addShape(shape)
+        frusNP.node().setDeactivationEnabled(False)
+        self.frustumNPNodes.append(frusNP.node())
 
         frusNP.setCollideMask(BitMask32.allOn())
         #self.boxNP.node().setDeactivationEnabled(False)
@@ -186,14 +199,31 @@ class Branch:
         return frusNP, visualFrusNP
     
     # Adds a conetwist constraint between two frustums, assumes each is next to one another in world space
-    def addConstraint(self, frus1NP, frus2NP, swing1, swing2, twist, damping):
+    def addConstraint(self, frus1NP, frus2NP, swing1, swing2, twist, damping, softness , bias, relaxation):
         #Setup ConeTwistConstraint Between Two Frustums 
-        frame1 = TransformState.makeHpr(Vec3(0, 0, 0)) # Positions Are Already in place, so is orientation so we can set Haw:0, Pitch:0  Roll: 0
-        frame2 = TransformState.makeHpr(Vec3(0, 0, 0))
+        # Input Pos Should be position of joint in world space 
+        center2Pos = self.frusLength / 2
+        # Calculate Joint Position Relative to frus1NP Center Of Mass 
+        pos1 = Point3(0, 0, center2Pos )
+        # Calculate Joint Position Relative to frus2NP Center Of Mass 
+        pos2 = Point3(0, 0, -1 * center2Pos)
+        origin = Point3(0, 0, 0)
+        frame1 = TransformState.makePosHpr(origin, Vec3(0, 0, -90)) #
+        frame2 = TransformState.makePosHpr(origin,Vec3(0, 0, -90))
 
-        # Add Constraint With Limits to Physics Engine
+        # Add Cone Constraint With Limits to Physics Engine
         cs = BulletConeTwistConstraint(frus1NP.node(), frus2NP.node(), frame1, frame2)
-        cs.setDebugDrawSize(2.0)
-        cs.setLimit(swing1, swing2, twist)
+        cs.setDebugDrawSize(10.0)
+        cs.setLimit(swing1=swing1, swing2=swing2, twist=twist, softness=softness , bias=bias, relaxation=relaxation)
         cs.setDamping(damping)
-        self.world.attachConstraint(cs)
+        cs.setFixThreshold(1.0)
+        cs.setMotorTargetInConstraintSpace(LQuaternionf(0, 0, 0, 0))
+        cs.setMaxMotorImpulse(8.0)
+        cs.enableMotor(True)
+        self.world.attach(cs)
+
+        # Add Piston Constraint To Limit Weird Translation 
+        #slider = BulletSliderConstraint(frus1NP.node(), frus2NP.node(), frame1, frame2, True)
+        #slider.setLowerLinearLimit(0.0001)
+        #slider.setUpperLinearLimit(0.001)
+        #self.world.attach(slider)

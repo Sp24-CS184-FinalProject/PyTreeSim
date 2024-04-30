@@ -25,6 +25,7 @@ from panda3d.core import Point3
 from panda3d.core import TransformState
 from panda3d.core import BitMask32
 from tree import *
+from wind import *
 
 class MyApp(ShowBase):
 
@@ -36,16 +37,19 @@ class MyApp(ShowBase):
         # World
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
         self.debugNP.show()
-        self.debugNP.node().showWireframe(True)
+        self.debugNP.node().showWireframe(False)
         self.debugNP.node().showConstraints(True)
         self.debugNP.node().showBoundingBoxes(False)
         self.debugNP.node().showNormals(True)
+
+        #wind simulation
+        self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=.5, scale=1.0)
 
         #self.debugNP.showTightBounds()
         #self.debugNP.showBounds()
 
         self.world = BulletWorld()
-        self.world.setGravity(Vec3(0, 0, -9.81))
+        self.world.setGravity(Vec3(0, 0, 0))
         self.world.setDebugNode(self.debugNP.node())
 
         # Ground (static)
@@ -59,25 +63,25 @@ class MyApp(ShowBase):
         self.world.attachRigidBody(self.groundNP.node())
 
         # create a few trees of different types
-        myTexture = loader.loadTexture("Pinewood_Bark_DIFF.png")
+        myTexture = loader.loadTexture("lowResBark.png")
         height = 10.0
-        baseRadius = 0.5
+        baseRadius = .75
         
         type = 'original'
         baseOrigin = np.array([0, 0, 0])
-        original = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        self.original = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         type = 'dense'
         baseOrigin = np.array([20, 0, 0])
-        dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        #dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         type = 'sparse'
         baseOrigin = np.array([40, 0, 0])
-        sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        #sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         type = None
         baseOrigin = np.array([60, 0, 0])
-        default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        #default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         #Camera Set To Look At Node1
         self.cam.setPos(0, -50, 0)
@@ -89,11 +93,20 @@ class MyApp(ShowBase):
         #self.cam.setPos(0, -100, 100)
         self.cam.lookAt(self.worldNP)
         self.world.setDebugNode(self.debugNP.node())
+        self.taskMgr.add(self.update, 'updatePhysics')
     
-    def update(task):
-        dt = globalClock.getDt()
-        self.world.doPhysics(dt)
-        return task.cont
+    def update(self, task):
+      dt = globalClock.getDt()
+      wind_force = self.wind_simulator.get_wind_force()
+      for node in self.original.getPhysicsNodes():
+        drag_force = self.wind_simulator.get_drag_force(node)
+        total_force = wind_force+drag_force
+        if total_force.is_nan():
+           continue
+        node.applyCentralForce(total_force)
+        node.setLinearVelocity(Vec3(0,0,0)) # Node Is Attached To A Tree And Should Have No Linear Velocity
+      self.world.doPhysics(dt, 1, 1)
+      return Task.cont
 
     
 
