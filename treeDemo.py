@@ -6,6 +6,9 @@ import pybullet_data
 from frustum import *
 from math import pi, sin, cos
 from direct.showbase.ShowBase import ShowBase
+from direct.gui.DirectGui import DirectButton
+from panda3d.core import Vec3, BitMask32
+from direct.showbase.DirectObject import DirectObject
 from direct.task import Task
 from panda3d.core import GeomNode
 from panda3d.core import NodePath
@@ -31,10 +34,25 @@ class MyApp(ShowBase):
 
     def __init__(self):
         ShowBase.__init__(self)
-        self.worldNP = self.render.attachNewNode('World')
+        # self.setup_gui()
+        # self.world_loaded = False
+        self.setup_world()
 
+    def setup_gui(self):
+        # Create a button to start the simulation
+        self.start_button = DirectButton(text="Start Simulation", scale=0.1, command=self.start_simulation)
 
+    def start_simulation(self):
+        # Load the world only if it hasn't been loaded yet
+        if not self.world_loaded:
+            self.setup_world()
+            self.world_loaded = True
+        # Attach the update task
+        self.taskMgr.add(self.update, 'update_world')
+
+    def setup_world(self):
         # World
+        self.worldNP = self.render.attachNewNode('World')
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
         self.debugNP.show()
         self.debugNP.node().showWireframe(False)
@@ -44,9 +62,6 @@ class MyApp(ShowBase):
 
         #wind simulation
         self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=.5, scale=1.0)
-
-        #self.debugNP.showTightBounds()
-        #self.debugNP.showBounds()
 
         self.world = BulletWorld()
         self.world.setGravity(Vec3(0, 0, 0))
@@ -108,9 +123,5 @@ class MyApp(ShowBase):
       self.world.doPhysics(dt, 1, 1)
       return Task.cont
 
-    
-
-
 app = MyApp()
 app.run()
-

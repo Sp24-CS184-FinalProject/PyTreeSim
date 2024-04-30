@@ -118,7 +118,10 @@ class Tree:
         swing2 = 36 # degrees
         twist = 120 # degrees
         damping = .9
-        parent.addConstraint(jointFrustum[1], branch.baseFrustumNP, swing1, swing2, twist, damping)
+        softness = .8
+        bias = .3
+        relaxation = .3
+        parent.addConstraint(jointFrustum[1], branch.baseFrustumNP, swing1, swing2, twist, damping, softness, bias, relaxation)
         parent.children.append(branch)
         return branch
 
@@ -221,7 +224,7 @@ class Branch:
         pos2 = Point3(0, 0, -1 * center2Pos)
         origin = Point3(0, 0, 0)
         frame1 = TransformState.makePosHpr(origin, Vec3(0, 0, -90)) #
-        frame2 = TransformState.makePosHpr(origin,Vec3(0, 0, -90))
+        frame2 = TransformState.makePosHpr(origin, Vec3(0, 0, -90))
 
         # Add Cone Constraint With Limits to Physics Engine
         cs = BulletConeTwistConstraint(frus1NP.node(), frus2NP.node(), frame1, frame2)
