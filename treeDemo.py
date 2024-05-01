@@ -54,11 +54,11 @@ class MyApp(ShowBase):
         # World
         self.worldNP = self.render.attachNewNode('World')
         self.debugNP = self.worldNP.attachNewNode(BulletDebugNode('Debug'))
-        # self.debugNP.show()
-        # self.debugNP.node().showWireframe(False)
-        # self.debugNP.node().showConstraints(True)
-        # self.debugNP.node().showBoundingBoxes(False)
-        # self.debugNP.node().showNormals(True)
+        #self.debugNP.show()
+        self.debugNP.node().showWireframe(False)
+        self.debugNP.node().showConstraints(False)
+        self.debugNP.node().showBoundingBoxes(False)
+        self.debugNP.node().showNormals(False)
 
         #wind simulation
         self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=.5, scale=1.0)

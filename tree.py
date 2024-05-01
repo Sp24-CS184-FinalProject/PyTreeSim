@@ -121,10 +121,10 @@ class Tree:
         branch = Branch(False, length, startPos, baseRadius, numFrustums, slimFactor,
                         frustumMass, self.texture, self.worldNP, self.world, self.render)
         branch.build()
-        swing1 = 60 # degrees 
-        swing2 = 36 # degrees
-        twist = 120 # degrees
-        damping = .9
+        swing1 = 20 # degrees 
+        swing2 = 20 # degrees
+        twist = 10 # degrees
+        damping = .3
         softness = .8
         bias = .3
         relaxation = .3
@@ -137,7 +137,7 @@ class Branch:
     def __init__(self, trunk, length, startPos, baseRadius, numFrustums, slimFactor, frustumMass, texture, worldNP, world, render):
         self.length = length
         self.startPos = startPos
-        self.frustumNPNodes = []
+        self.frustumNPNodes = [] #Pointer to all physics node in branch
         if trunk:
             self.direction = np.array([0, 0, 1])
         else:
@@ -149,6 +149,8 @@ class Branch:
         self.slimFactor = slimFactor
         self.frustumMass = frustumMass
         self.texture = texture
+        self.texture.setWrapU(Texture.WMRepeat)
+        self.texture.setWrapV(Texture.WMRepeat)
         self.baseFrustum = None
         self.worldNP = worldNP # Pointer to the bullet physics engine world
         self.world = world
@@ -261,12 +263,13 @@ class Branch:
         
         #add physics
         leafBodyNode = BulletRigidBodyNode('Leaf')
-        leafBodyNode.setMass(0.05)
+        leafBodyNode.setMass(0.0005)
         leafShape = BulletBoxShape(LVector3f(0.5, 0.1, 0.5))  # Adjust as necessary
         leafBodyNode.addShape(leafShape)
 
         leafNP = self.render.attachNewNode(leafBodyNode)
         leafNP.setPos(position)
+        self.frustumNPNodes.append(leafNP)
         
         leafNP.node().setDeactivationEnabled(False)
         self.world.attachRigidBody(leafBodyNode)
@@ -287,12 +290,14 @@ class Branch:
         random_roll = random.uniform(0, 360)
         random_pitch = random.uniform(0, 360)
         random_yaw = random.uniform(0, 360)
+        leafpos = Point3(position[0], position[1], position[2])
+        leafFrame = TransformState.makePosHpr(leafpos, Vec3(random_roll, random_pitch, random_yaw))
         leafNP.setHpr(random_roll, random_pitch, random_yaw)
 
 
         # Constraint setup
         swing1, swing2, twist, damping = 30, 30, 0, 0.5
-        self.addLeafConstraint(leafNP, closest_frustum_node, swing1, swing2, twist, damping)
+        self.addLeafConstraint(leafNP, closest_frustum_node, swing1, swing2, twist, damping, leafFrame)
         
 
         
@@ -330,7 +335,7 @@ class Branch:
 
         # Add Cone Constraint With Limits to Physics Engine
         cs = BulletConeTwistConstraint(frus1NP.node(), frus2NP.node(), frame1, frame2)
-        cs.setDebugDrawSize(10.0)
+        cs.setDebugDrawSize(0)
         cs.setLimit(swing1=swing1, swing2=swing2, twist=twist, softness=softness , bias=bias, relaxation=relaxation)
         cs.setDamping(damping)
         cs.setFixThreshold(1.0)
@@ -339,16 +344,17 @@ class Branch:
         cs.enableMotor(True)
         self.world.attach(cs)
         
-    def addLeafConstraint(self, leafNP, frustumNP, swing1, swing2, twist, damping):
+    def addLeafConstraint(self, leafNP, frustumNP, swing1, swing2, twist, damping, leafFrame):
         posLeaf = Point3(0, 0, 0) #connect to centroid atm, maybe update this
         posFrus = Point3(0, 0, 0)
 
-        frameLeaf = TransformState.makePosHpr(posLeaf, Vec3(0, 0, 0))
-        frameFrus = TransformState.makePosHpr(posFrus, Vec3(0, 0, 0))
+        #frameLeaf = TransformState.makePosHpr(posLeaf, Vec3(0, 0, -90))
+        frameFrus = TransformState.makePosHpr(posFrus, Vec3(0, 0, -90))
 
-        constraint = BulletConeTwistConstraint(leafNP.node(), frustumNP.node(), frameLeaf, frameFrus)
+        constraint = BulletConeTwistConstraint(leafNP.node(), frustumNP.node(), leafFrame, frameFrus)
         constraint.setLimit(swing1, swing2, twist)
         constraint.setDamping(damping)
+        constraint.setDebugDrawSize(3)
         self.world.attachConstraint(constraint, True)
 
         # Add Piston Constraint To Limit Weird Translation 
