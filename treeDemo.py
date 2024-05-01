@@ -27,6 +27,7 @@ from panda3d.core import Vec4
 from panda3d.core import Point3
 from panda3d.core import TransformState
 from panda3d.core import BitMask32
+from panda3d.core import SamplerState
 from tree import *
 from wind import *
 
@@ -61,7 +62,7 @@ class MyApp(ShowBase):
         self.debugNP.node().showNormals(False)
 
         #wind simulation
-        self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=.5, scale=1.0)
+        self.wind_simulator = Wind(direction = Vec3(1,0,0), magnitude=5, scale=10.0)
 
         self.world = BulletWorld()
         self.world.setGravity(Vec3(0, 0, 0))
@@ -78,7 +79,10 @@ class MyApp(ShowBase):
         self.world.attachRigidBody(self.groundNP.node())
 
         # create a few trees of different types
-        myTexture = loader.loadTexture("lowResBark.png")
+        myTexture = loader.loadTexture("Pinewood_Bark_DIFF.png")
+        myTexture.setWrapU(Texture.WMRepeat)
+        myTexture.setWrapV(Texture.WMRepeat)
+        myTexture.setMinfilter(SamplerState.FT_linear_mipmap_linear)
         height = 10.0
         baseRadius = .75
         
@@ -86,27 +90,27 @@ class MyApp(ShowBase):
         baseOrigin = np.array([0, 0, 0])
         self.original = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        # type = 'dense'
-        # baseOrigin = np.array([20, 0, 0])
-        # dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        type = 'dense'
+        baseOrigin = np.array([20, 0, 0])
+        #self.dense = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        # type = 'sparse'
-        # baseOrigin = np.array([40, 0, 0])
-        # sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        #type = 'sparse'
+        #baseOrigin = np.array([40, 0, 0])
+        #self.sparse = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
-        # type = None
-        # baseOrigin = np.array([60, 0, 0])
-        # default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
+        #type = None
+        #baseOrigin = np.array([60, 0, 0])
+        #self.default = Tree(type, height, baseOrigin, baseRadius, myTexture, self.worldNP, self.world, self.render)
 
         #Camera Set To Look At Node1
-        self.cam.setPos(0, -50, 0)
+        self.cam.setPos(0, -60, 0)
         
         self.world.setDebugNode(self.debugNP.node())
 
 
         
         #self.cam.setPos(0, -100, 100)
-        self.cam.lookAt(self.worldNP)
+        self.cam.lookAt(20, 0, 0)
         self.world.setDebugNode(self.debugNP.node())
         self.taskMgr.add(self.update, 'updatePhysics')
     
@@ -120,7 +124,7 @@ class MyApp(ShowBase):
            continue
         node.applyCentralForce(total_force)
         node.setLinearVelocity(Vec3(0,0,0)) # Node Is Attached To A Tree And Should Have No Linear Velocity
-      self.world.doPhysics(dt, 1, 1)
+      self.world.doPhysics(dt, 10, 1 / 120)
       return Task.cont
 
 app = MyApp()

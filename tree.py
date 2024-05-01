@@ -193,13 +193,13 @@ class Branch:
 
             self.addConstraint(currNP, nextNP, swing1, swing2, twist, damping, softness, bias, relaxation)
             currNP, currVisualNP = nextNP, nextVisualNP
-
+            if not self.trunk and i % 2 == 0:
+                self.drawLeaf(currNP, pos=LVector3(currentPos[0], currentPos[1], currentPos[2]), scale= 0.05)  
             currentPos = nextPos
             currRadius = currRadius * self.slimFactor
             frustumMass = frustumMass * self.slimFactor
-            i += 1
-        if not self.trunk:
-            self.placeLeavesRandomly()        
+            i += 1      
+
     # Creates the Physical And Graphical NodePaths For a Frustum Object and attaches them to the correct worldNodes, Two Return Values 
     def buildFrustum(self, frustum, frustumMass):
         geom = frustum.generateMesh(10)
@@ -226,78 +226,28 @@ class Branch:
 
         return frusNP, visualFrusNP
     
-    def drawLeaf(self, position, closest_frustum_node):   
-        vformat = GeomVertexFormat.getV3n3cpt2()
-        vdata = GeomVertexData('leaf', vformat, Geom.UHStatic)
-        vertex = GeomVertexWriter(vdata, 'vertex')
-        normal = GeomVertexWriter(vdata, 'normal')
-        color = GeomVertexWriter(vdata, 'color')
-        texcoord = GeomVertexWriter(vdata, 'texcoord')
-        
-        #create mesh for leaf (maybe move this somewhere else)
-        thickness = 0.1
-        front_points = [LVector3(0, 0, 1), LVector3(-0.5, 0, 0), LVector3(0.5, 0, 0), LVector3(0, 0, 1)]
-        back_points = [p + LVector3(0, thickness, 0) for p in front_points] 
-        for p in front_points + back_points:
-            vertex.addData3f(p)
-            normal.addData3f(0, 1, 0)
-            color.addData4f(0.2, 0.8, 0.2, 1)
-            texcoord.addData2f(p.x + 0.5, p.z + 0.5)
-        
-        tris = GeomTriangles(Geom.UHStatic)
-        tris.addVertices(0, 1, 2)
-        tris.addVertices(1, 3, 2)
-        tris.addVertices(4, 5, 6)
-        tris.addVertices(5, 7, 6)
-        
-        for i in range(len(front_points)):
-            next_i = (i + 1) % len(front_points)
-            tris.addVertices(i, next_i, i + 4)
-            tris.addVertices(next_i, next_i + 4, i + 4)
-        
-        geom = Geom(vdata)
-        geom.addPrimitive(tris)
-        
-        leafNode = GeomNode('leaf')
-        leafNode.addGeom(geom)
-        
-        #add physics
-        leafBodyNode = BulletRigidBodyNode('Leaf')
-        leafBodyNode.setMass(0.0005)
-        leafShape = BulletBoxShape(LVector3f(0.5, 0.1, 0.5))  # Adjust as necessary
-        leafBodyNode.addShape(leafShape)
+    def drawLeaf(self, nodePath, pos=LVector3(0, 0, 0), vecList=[LVector3(0, 0, 1), LVector3(1, 0, 0), LVector3(0, -1, 0)], scale=0.125):
 
-        leafNP = self.render.attachNewNode(leafBodyNode)
-        leafNP.setPos(position)
-        self.frustumNPNodes.append(leafNP)
-        
-        leafNP.node().setDeactivationEnabled(False)
-        self.world.attachRigidBody(leafBodyNode)
-        leafNP.setCollideMask(BitMask32.allOn())
-        
-        #leaf size
-        leafNP.setScale(1) 
+        # use the vectors that describe the direction the branch grows to make the right
+            # rotation matrix
+        newCs = LMatrix4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        newCs.setRow(0, vecList[2])  # right
+        newCs.setRow(1, vecList[1])  # up
+        newCs.setRow(2, vecList[0])  # forward
+        newCs.setRow(3, (0, 0, 0))
+        newCs.setCol(3, (0, 0, 0, 1))
 
-        # Create visual node and attach
-        leafVisualNP = NodePath(leafNode)
-        leafVisualNP.reparentTo(leafNP)
-        texture = loader.loadTexture("leaf.jpg")
-        texture.setWrapU(Texture.WMRepeat)
-        texture.setWrapV(Texture.WMRepeat)
-        leafVisualNP.setTexture(texture, 1)
+        axisAdj = LMatrix4.scaleMat(scale) * newCs * LMatrix4.translateMat(pos)
 
-        # Apply random orientation
-        random_roll = random.uniform(0, 360)
-        random_pitch = random.uniform(0, 360)
-        random_yaw = random.uniform(0, 360)
-        leafpos = Point3(position[0], position[1], position[2])
-        leafFrame = TransformState.makePosHpr(leafpos, Vec3(random_roll, random_pitch, random_yaw))
-        leafNP.setHpr(random_roll, random_pitch, random_yaw)
+        # orginlly made the leaf out of geometry but that didnt look good
+        # I also think there should be a better way to handle the leaf texture other than
+        # hardcoding the filename
+        leafModel = loader.loadModel('models/shrubbery')
+        leafTexture = loader.loadTexture('models/material-10-cl.png')
 
-
-        # Constraint setup
-        swing1, swing2, twist, damping = 30, 30, 0, 0.5
-        self.addLeafConstraint(leafNP, closest_frustum_node, swing1, swing2, twist, damping, leafFrame)
+        leafModel.reparentTo(nodePath)
+        leafModel.setTexture(leafTexture, 1)
+        leafModel.setTransform(TransformState.makeMat(axisAdj))
         
 
         
